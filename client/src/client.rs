@@ -1,8 +1,11 @@
 use std::io::{ErrorKind, Read, Write, stdin};
 use std::net::TcpStream;
 use std::{thread, usize};
+use hex_literal::hex;
+
 use base64;
 use json::{self, JsonValue, object};
+use crate::crypto;
 pub struct Client {
     uuid: String
 }
@@ -32,12 +35,13 @@ impl Client {
             /* if msg != "--end--".to_string() {
                 break;
             } */
+            let key = hex!("603DEB1015CA71BE2B73AEF0857D77811F352C073B6108D72D9810A30914DFF4");
     
             let msg_data = object!{
                 sender_uuid: self.uuid.clone(),
                 receiver_uuid: end_client.clone(),
                 task: "send_message",
-                message: base64::encode(msg),
+                message: base64::encode(crypto::aes_256_ctr_encrypt(&msg.as_bytes().to_vec(), &key).unwrap()),
             };
     
             self.new_message(msg_data);
@@ -72,8 +76,12 @@ impl Client {
                     let data_rcv = String::from_utf8(read_message(&mut stream)).unwrap();
                     //println!("{:?}", data_rcv);
                     let parsed_data = json::parse(data_rcv.as_str()).unwrap();
+
+                    let key = hex!("603DEB1015CA71BE2B73AEF0857D77811F352C073B6108D72D9810A30914DFF4");
+
+                    let msg = crypto::aes_256_ctr_decrypt(&base64::decode(parsed_data["message"].to_string()).unwrap(), &key).unwrap(); 
     
-                    let msg_rcv = String::from_utf8(base64::decode(parsed_data["message"].to_string()).unwrap()).unwrap();
+                    let msg_rcv = String::from_utf8(msg.to_vec()).unwrap();
                     if msg_rcv.len() == 0 {
                         println!("Break");
                         break;
