@@ -46,7 +46,7 @@ impl Clone for ConnectedClient {
 
 
 fn upload_msg(msg: String) -> Result<(), PostGresErr>{
-    let mut client = Client::connect("postgresql://postgres:,qY6p}[y]y5wD2=p@20.123.186.55/chatdb", NoTls)?;
+    let mut client = Client::connect("postgresql://chatdbuser:,qY6p}[y]y5wD2=p@20.123.186.55/chatdb", NoTls)?;
     client.execute("
         INSERT INTO messages (text) VALUES ($1)
         ", &[&msg],
