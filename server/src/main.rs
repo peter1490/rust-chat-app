@@ -21,8 +21,32 @@ impl Clone for ConnectedClient {
     }
 }
 
+/*
+                                           Table "public.messages"
+   Column    |            Type             | Collation | Nullable |                 Default                  
+-------------+-----------------------------+-----------+----------+------------------------------------------
+ msg_id      | integer                     |           | not null | nextval('messages_msg_id_seq'::regclass)
+ sender_id   | integer                     |           | not null | 
+ receiver_id | integer                     |           | not null | 
+ message     | text                        |           |          | 
+ isread      | boolean                     |           | not null | 
+ time        | timestamp without time zone |           |          | 
+*/
+
+
+
+/*
+                                         Table "public.user"
+    Column     |         Type          | Collation | Nullable |                Default                
+---------------+-----------------------+-----------+----------+---------------------------------------
+ user_id       | integer               |           | not null | nextval('user_user_id_seq'::regclass)
+ user_username | character varying(50) |           | not null | 
+ user_password | character varying(50) |           | not null | 
+*/
+
+
 fn upload_msg(msg: String) -> Result<(), PostGresErr>{
-    let mut client = Client::connect("postgresql://postgres:postgres@192.168.0.19/chatdb", NoTls)?;
+    let mut client = Client::connect("postgresql://postgres:,qY6p}[y]y5wD2=p@20.123.186.55/chatdb", NoTls)?;
     client.execute("
         INSERT INTO messages (text) VALUES ($1)
         ", &[&msg],
