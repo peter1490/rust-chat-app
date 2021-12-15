@@ -1,3 +1,5 @@
+pub mod client;
+pub mod crypto;
 use std::fmt::Result;
 use std::io::{ErrorKind, Read, Write, stdin};
 use std::net::TcpStream;
@@ -117,31 +119,12 @@ fn new_message(msg_data: JsonValue){
 
 
 fn main() {
+    
     println!("uuid: ");
-    
-    let uuid = get_user_input();
-    let clone_uuid = uuid.clone();
 
-    thread::spawn(move || {
-        setup_receive_stream(clone_uuid)
-    });
-    
-    println!("client:");
-    let end_client = get_user_input();
-    loop {
-        let msg = get_user_input();
-        
-        /* if msg != "--end--".to_string() {
-            break;
-        } */
+    /* let uuid = client::get_user_input();
 
-        let msg_data = object!{
-            sender_uuid: uuid.clone(),
-            receiver_uuid: end_client.clone(),
-            task: "send_message",
-            message: base64::encode(msg),
-        };
+    let curr_client = client::Client::new(uuid);
 
-        new_message(msg_data);
-    }
+    curr_client.run(); */
 }
