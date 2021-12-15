@@ -1,8 +1,21 @@
+use std::fmt::Result;
 use std::io::{ErrorKind, Read, Write, stdin};
 use std::net::TcpStream;
 use std::{thread, usize};
 use base64;
 use json::{self, JsonValue, object};
+use serde_json;
+use serde::{Serialize};
+
+
+#[derive(Serialize)]
+struct Message {
+    sender_uid: String,
+    receiver_uid: String,
+    message: String,
+    isRead: bool,
+    time: String,
+}
 
 pub fn get_user_input() -> String {
     let mut buff = String::new();
@@ -13,6 +26,15 @@ pub fn get_user_input() -> String {
         .expect("Can't read from stdin !");
     msg.push_str(buff.trim());
     msg
+}
+
+fn new_messages_file(messages: Vec<Message>) -> serde_json::Result<()> {
+    let mut messages_serialized = String::new();
+    for i in messages {
+        let msg = serde_json::to_string(&i)?;
+        messages_serialized += &msg;
+    }
+    Ok(())
 }
 
 const BUFF_SIZE: usize = 50;
@@ -92,6 +114,7 @@ fn new_message(msg_data: JsonValue){
         }
     }
 }
+
 
 fn main() {
     println!("uuid: ");
