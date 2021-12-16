@@ -1,5 +1,4 @@
 use crate::data::{Message, Packet, read_from_json, add_message_vector};
-
 use hex_literal::hex;
 use std::io::{stdin, ErrorKind, Read, Write};
 use std::net::TcpStream;

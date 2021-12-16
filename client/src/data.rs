@@ -56,10 +56,6 @@ pub fn convert_to_json(messages: Vec<Message>) -> Result<(), serde_json::Error> 
     Ok(())
 }
 
-/*
-Prendre message -> ajouter au vecteur -> convertir ce vecteur en json -> print le vecteur pour l'utilisateur en question
-*/
-
 pub fn read_from_json(path: String) -> Vec<Message>{
 
     if !Path::new("history.json").exists() {
