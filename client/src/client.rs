@@ -19,6 +19,13 @@ impl Client {
 
         println!("client:");
         let mut end_client = get_user_input();
+        
+        let history = read_from_json("history.json".to_string());
+        for i in history {
+            if i.sender_uid == end_client || (i.sender_uid == self.uuid && i.receiver_uid == end_client) {
+                println!("[{:?}] : {:?} > {:?}", i.time, i.sender_uid, i.message);
+            }
+        }
 
         loop {
             let msg = get_user_input();
@@ -28,6 +35,12 @@ impl Client {
                 if msg == "/change" {
                     println!("What is the username of the user you want to talk to ?");
                     end_client = get_user_input();
+                    let history = read_from_json("history.json".to_string());
+                    for i in history {
+                        if i.sender_uid == end_client || (i.sender_uid == self.uuid && i.receiver_uid == end_client) {
+                            println!("[{:?}] : {:?} > {:?}", i.time, i.sender_uid, i.message);
+                        }
+                    }
                 }
             } else {
                 let key = hex!("603DEB1015CA71BE2B73AEF0857D77811F352C073B6108D72D9810A30914DFF4");
@@ -91,10 +104,13 @@ impl Client {
                                         println!("Break");
                                         break;
                                     } else {
+                                        let msg_string = msg.message.clone();
+                                        let msg_uid = msg.sender_uid.clone();
+                                        add_message_vector(msg);
                                         println!(
                                             "{:?}: {:?}",
-                                            msg.sender_uid,
-                                            msg.message
+                                            msg_uid,
+                                            msg_string
                                         );
                                     }
                                 }
