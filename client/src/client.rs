@@ -273,12 +273,14 @@ impl Client {
             } else {
                 let key = hex!("603DEB1015CA71BE2B73AEF0857D77811F352C073B6108D72D9810A30914DFF4");
 
-                let message = Message::new(self.uuid.clone(), end_client.clone(), msg);
+                let message = Message::new(self.uuid.clone(), end_client.clone(), msg.clone());
+                let message_temp = Message::new(self.uuid.clone(), end_client.clone(), msg);
+                data::add_message_vector(message);
                 let packet = Packet::new(
                     String::from(""),
                     end_client.clone(),
                     String::from("send_message"),
-                    message.encrypt(&key),
+                    message_temp.encrypt(&key),
                 );
                 self.new_message(packet, server_pub_key.clone());
             }
