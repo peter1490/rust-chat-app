@@ -1,59 +1,50 @@
-use std::io::{ErrorKind, Read, Write, stdin};
+use crate::data::{Message, Packet};
+
+use hex_literal::hex;
+use std::io::{stdin, ErrorKind, Read, Write};
 use std::net::TcpStream;
 use std::{thread, usize};
-use hex_literal::hex;
-
-use base64;
-use json::{self, JsonValue, object};
-use crate::crypto;
 pub struct Client {
-    uuid: String
+    uuid: String,
 }
 
 impl Client {
-
-    pub fn new(uuid: String) -> Self{
-        Client {
-            uuid
-        }
+    pub fn new(uuid: String) -> Self {
+        Client { uuid }
     }
 
-    pub fn run (&self){
-
+    pub fn run(&self) {
         let tmp_uuid = self.uuid.clone();
 
-        thread::spawn(move || {
-            Client::setup_receive_stream(tmp_uuid)
-        });
+        thread::spawn(move || Client::setup_receive_stream(tmp_uuid));
 
         println!("client:");
         let end_client = get_user_input();
 
         loop {
             let msg = get_user_input();
-            
+
             /* if msg != "--end--".to_string() {
                 break;
             } */
             let key = hex!("603DEB1015CA71BE2B73AEF0857D77811F352C073B6108D72D9810A30914DFF4");
-    
-            let msg_data = object!{
-                sender_uuid: self.uuid.clone(),
-                receiver_uuid: end_client.clone(),
-                task: "send_message",
-                message: base64::encode(crypto::aes_256_ctr_encrypt(&msg.as_bytes().to_vec(), &key).unwrap()),
-            };
-    
-            self.new_message(msg_data);
+
+            let message = Message::new(self.uuid.clone(), end_client.clone(), msg);
+            let mut packet = Packet::new(
+                String::from(""),
+                end_client.clone(),
+                String::from("send_message"),
+                message.to_string().unwrap(),
+            );
+            packet.encrypt_data(&key);
+            self.new_message(packet);
         }
     }
 
-    fn new_message(&self, msg_data: JsonValue){
+    fn new_message(&self, packet: Packet) {
         match TcpStream::connect("localhost:3333") {
             Ok(mut stream) => {
-                
-                send_message(&mut stream, msg_data.to_string().as_bytes().to_vec());
-                //println!("you: {:?}", String::from_utf8(base64::decode(msg_data["message"].to_string()).unwrap()).unwrap());
+                send_message(&mut stream, packet.to_vec().unwrap());
             }
             Err(e) => {
                 println!("Failed to connect: {}", e);
@@ -65,28 +56,45 @@ impl Client {
         match TcpStream::connect("localhost:3333") {
             Ok(mut stream) => {
                 println!("Successfully connected to server in port 3333");
-                
-                let msg_data = object!{
-                    sender_uuid: uuid,
-                    task: "setup_receiver_stream",
-                };
-                stream.write(msg_data.to_string().as_bytes()).unwrap();
-                
+
+                let packet = Packet::new(
+                    String::from(uuid),
+                    String::from(""),
+                    String::from("setup_receiver_stream"),
+                    String::from(""),
+                );
+                stream.write(&packet.to_vec().unwrap()).unwrap();
+
                 loop {
-                    let data_rcv = String::from_utf8(read_message(&mut stream)).unwrap();
-                    //println!("{:?}", data_rcv);
-                    let parsed_data = json::parse(data_rcv.as_str()).unwrap();
+                    match Packet::from_vec(read_message(&mut stream)) {
+                        Ok(mut packet) => {
+                            let key = hex!(
+                                "603DEB1015CA71BE2B73AEF0857D77811F352C073B6108D72D9810A30914DFF4"
+                            );
 
-                    let key = hex!("603DEB1015CA71BE2B73AEF0857D77811F352C073B6108D72D9810A30914DFF4");
+                            packet.decrypt_data(&key);
 
-                    let msg = crypto::aes_256_ctr_decrypt(&base64::decode(parsed_data["message"].to_string()).unwrap(), &key).unwrap(); 
-    
-                    let msg_rcv = String::from_utf8(msg.to_vec()).unwrap();
-                    if msg_rcv.len() == 0 {
-                        println!("Break");
-                        break;
-                    }else{
-                        println!("{:?}: {:?}", parsed_data["sender_uuid"].to_string(), msg_rcv);
+                            match Message::from_string(packet.data) {
+                                Ok(msg) => {
+                                    if msg.message.len() == 0 {
+                                        println!("Break");
+                                        break;
+                                    } else {
+                                        println!(
+                                            "{:?}: {:?}",
+                                            msg.sender_uid,
+                                            msg.message
+                                        );
+                                    }
+                                }
+                                _=>{
+                                    println!("Could not read message !");
+                                }
+                            }
+                        }
+                        _ => {
+                            println!("Could not read packet !");
+                        }
                     }
                 }
             }
@@ -94,15 +102,14 @@ impl Client {
                 println!("Failed to connect: {}", e);
             }
         }
-    }    
-
+    }
 }
 
 //--------------------------------FUNCTIONS--------------------------------
 
 const BUFF_SIZE: usize = 50;
 
-fn send_message(stream: &mut TcpStream, mut msg:Vec<u8>) {
+fn send_message(stream: &mut TcpStream, mut msg: Vec<u8>) {
     if msg.len() % BUFF_SIZE == 0 {
         msg.extend([32].iter());
     }

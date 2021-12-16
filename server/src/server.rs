@@ -1,5 +1,5 @@
 use crate::client::ConnectedClient;
-use json::{self, JsonValue};
+use crate::data::Packet;
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{
@@ -9,8 +9,7 @@ use std::sync::{
 use std::thread;
 
 const BIND_ADDR: &str = "0.0.0.0:3333";
-pub struct Server {
-}
+pub struct Server {}
 
 impl Server {
     pub fn run() {
@@ -25,28 +24,36 @@ impl Server {
                 Ok(mut stream) => {
                     let mutex_clone = Arc::clone(&mutex);
                     thread::spawn(move || {
-                        let data_rcv = String::from_utf8(read_message(&mut stream)).unwrap();
-                        let parsed_data = json::parse(data_rcv.as_str()).unwrap();
+                        match Packet::from_vec(read_message(&mut stream)) {
+                            Ok(packet) => {
+                                println!("New packet");
+                                let task: &str = &packet.task;
+                                match task {
+                                    "setup_receiver_stream" => {
+                                        let (tx, rx) = mpsc::channel::<Vec<u8>>();
+                                        let new_client = ConnectedClient {
+                                            thread_sender: tx,
+                                            uuid: packet.sender_uid,
+                                        };
 
-                        let client_uuid = parsed_data["sender_uuid"].to_string();
-                        let client_task = parsed_data["task"].to_string();
-
-                        if client_task == String::from("setup_receiver_stream") {
-                            println!("New connection: {}", stream.peer_addr().unwrap());
-                            let (tx, rx) = mpsc::channel::<Vec<u8>>();
-                            let new_client = ConnectedClient {
-                                thread_sender: tx,
-                                uuid: client_uuid,
-                            };
-
-                            {
-                                let mut mutex_lock = mutex_clone.lock().unwrap();
-                                mutex_lock.push(new_client);
+                                        {
+                                            let mut mutex_lock = mutex_clone.lock().unwrap();
+                                            mutex_lock.push(new_client);
+                                        }
+                                        // connection succeeded
+                                        Server::setup_send_stream_client(stream, mutex_clone, rx)
+                                    }
+                                    "send_message" => {
+                                        Server::client_to_client_msg(packet, mutex_clone)
+                                    }
+                                    _ => {
+                                        println!("Bad task !");
+                                    }
+                                }
                             }
-                            // connection succeeded
-                            Server::setup_send_stream_client(stream, mutex_clone, rx)
-                        } else {
-                            Server::client_to_client_msg(parsed_data, mutex_clone)
+                            _ => {
+                                println!("Could not read packet !");
+                            }
                         }
                     });
                 }
@@ -58,17 +65,17 @@ impl Server {
     }
 
     fn client_to_client_msg(
-        message_data: JsonValue,
+        packet: Packet,
         thread_mutex: Arc<Mutex<Vec<ConnectedClient>>>,
     ) {
         let connected_clients = thread_mutex.lock().unwrap();
         for connected_client in connected_clients.iter() {
-            if connected_client.uuid == message_data["receiver_uuid"].to_string() {
+            if connected_client.uuid == packet.receiver_uid {
                 println!("New message sent");
 
                 connected_client
                     .thread_sender
-                    .send(message_data.to_string().as_bytes().to_vec())
+                    .send(packet.to_vec().unwrap())
                     .unwrap();
             }
         }
