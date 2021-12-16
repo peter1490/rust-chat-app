@@ -3,8 +3,11 @@ use base64;
 use serde::{Deserialize, Serialize};
 use serde_json::{self, Error as JsonError};
 use std::error::Error;
+use std::path::Path;
 use std::fs::File;
 use std::io::{Write, Read};
+use std::fs::OpenOptions;
+
 
 #[derive(Serialize, Deserialize)]
 pub struct Message {
@@ -35,9 +38,20 @@ impl Message {
     }
 }
 
-fn convert_to_json(messages: Vec<Message>) -> Result<(), serde_json::Error> {
+pub fn add_message_vector(message: Message) {
+    let mut messages = read_from_json("history.json".to_string());
+    messages.push(message);
+    convert_to_json(messages);
+}
+
+pub fn convert_to_json(messages: Vec<Message>) -> Result<(), serde_json::Error> {
     let json = serde_json::to_string(&messages)?;
-    let mut file = File::create("history.json").unwrap();
+    let mut file = OpenOptions::new()
+        .create_new(false)
+        .write(true)
+        .append(false)
+        .open("history.json")
+        .unwrap();
     file.write_all(json.as_bytes()).expect("Cannot write in file");
     Ok(())
 }
@@ -46,13 +60,24 @@ fn convert_to_json(messages: Vec<Message>) -> Result<(), serde_json::Error> {
 Prendre message -> ajouter au vecteur -> convertir ce vecteur en json -> print le vecteur pour l'utilisateur en question
 */
 
-fn read_from_json(path: String) -> Result<Vec<Message>, std::io::Error>{
-    let mut file = File::open(path)?;
-    let mut json = String::new();
-    file.read_to_string(&mut json)?;
+pub fn read_from_json(path: String) -> Vec<Message>{
 
-    let messages: Vec<Message> = serde_json::from_str(&json)?;
-    Ok(messages)
+    if !Path::new("history.json").exists() {
+        File::create("history.json").expect("Cannot create file");
+    }
+
+    let mut messages = Vec::new();
+    let mut file = OpenOptions::new()
+        .create_new(false)
+        .read(true)
+        .open(path)
+        .unwrap();
+    let mut json = String::new();
+    file.read_to_string(&mut json).expect("Error while reading file");
+    if json.len() > 0{
+        messages = serde_json::from_str(&json).expect("Error while creating Vector");
+    }
+    messages
 }
 
 #[derive(Serialize, Deserialize)]

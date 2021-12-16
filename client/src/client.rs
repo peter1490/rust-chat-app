@@ -1,4 +1,4 @@
-use crate::data::{Message, Packet};
+use crate::data::{Message, Packet, read_from_json, add_message_vector};
 
 use hex_literal::hex;
 use std::io::{stdin, ErrorKind, Read, Write};
@@ -15,7 +15,6 @@ impl Client {
 
     pub fn run(&self) {
         let tmp_uuid = self.uuid.clone();
-
         thread::spawn(move || Client::setup_receive_stream(tmp_uuid));
 
         println!("client:");
@@ -23,7 +22,6 @@ impl Client {
 
         loop {
             let msg = get_user_input();
-            
 
             let ch1 = msg.chars().next().unwrap();
             if ch1 == '/' {
@@ -35,11 +33,13 @@ impl Client {
                 let key = hex!("603DEB1015CA71BE2B73AEF0857D77811F352C073B6108D72D9810A30914DFF4");
 
                 let message = Message::new(self.uuid.clone(), end_client.clone(), msg);
+                let message_string = message.to_string().unwrap();
+                add_message_vector(message);
                 let mut packet = Packet::new(
                     String::from(""),
                     end_client.clone(),
                     String::from("send_message"),
-                    message.to_string().unwrap(),
+                    message_string,
                 );
                 packet.encrypt_data(&key);
                 self.new_message(packet);
@@ -155,12 +155,11 @@ fn read_message(stream: &mut TcpStream) -> Vec<u8> {
 pub fn get_user_input() -> String {
     let mut buff = String::new();
     let mut msg = String::new();
+    print!("=> ");
     stdin()
         .read_line(&mut buff)
         .expect("Can't read from stdin !");
     msg.push_str(buff.trim());
-
-
 
     msg
 }
