@@ -12,7 +12,6 @@ use postgres::{Client, NoTls, Error as PostGresErr};
  message     | text                        |           |          | 
  isread      | boolean                     |           | not null | 
  time        | timestamp without time zone |           |          |
- pub_key     | text                        |           |          | 
 */
 
 
@@ -24,6 +23,8 @@ use postgres::{Client, NoTls, Error as PostGresErr};
  user_id       | integer               |           | not null | nextval('user_user_id_seq'::regclass)
  user_username | character varying(50) |           | not null | 
  user_password | character varying(50) |           | not null | 
+ pub_key     | text                        |           |          | 
+
 */
 
 fn upload_msg(msg: Message) -> Result<(), PostGresErr>{

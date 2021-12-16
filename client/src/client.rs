@@ -19,30 +19,41 @@ impl Client {
         thread::spawn(move || Client::setup_receive_stream(tmp_uuid));
 
         println!("client:");
-        let end_client = get_user_input();
+        let mut end_client = get_user_input();
 
         loop {
             let msg = get_user_input();
+            
+
+            let ch1 = msg.chars().next().unwrap();
+            if ch1 == '/' {
+                if msg == "/change" {
+                    println!("What is the username of the user you want to talk to ?");
+                    end_client = get_user_input();
+                }
+            } else {
+                let key = hex!("603DEB1015CA71BE2B73AEF0857D77811F352C073B6108D72D9810A30914DFF4");
+
+                let message = Message::new(self.uuid.clone(), end_client.clone(), msg);
+                let mut packet = Packet::new(
+                    String::from(""),
+                    end_client.clone(),
+                    String::from("send_message"),
+                    message.to_string().unwrap(),
+                );
+                packet.encrypt_data(&key);
+                self.new_message(packet);
+            }
 
             /* if msg != "--end--".to_string() {
                 break;
             } */
-            let key = hex!("603DEB1015CA71BE2B73AEF0857D77811F352C073B6108D72D9810A30914DFF4");
 
-            let message = Message::new(self.uuid.clone(), end_client.clone(), msg);
-            let mut packet = Packet::new(
-                String::from(""),
-                end_client.clone(),
-                String::from("send_message"),
-                message.to_string().unwrap(),
-            );
-            packet.encrypt_data(&key);
-            self.new_message(packet);
         }
     }
 
     fn new_message(&self, packet: Packet) {
-        match TcpStream::connect("localhost:3333") {
+        match TcpStream::connect("20.126.99.108:3333") {
             Ok(mut stream) => {
                 send_message(&mut stream, packet.to_vec().unwrap());
             }
@@ -53,7 +64,7 @@ impl Client {
     }
 
     fn setup_receive_stream(uuid: String) {
-        match TcpStream::connect("localhost:3333") {
+        match TcpStream::connect("20.126.99.108:3333") {
             Ok(mut stream) => {
                 println!("Successfully connected to server in port 3333");
 
@@ -144,10 +155,12 @@ fn read_message(stream: &mut TcpStream) -> Vec<u8> {
 pub fn get_user_input() -> String {
     let mut buff = String::new();
     let mut msg = String::new();
-
     stdin()
         .read_line(&mut buff)
         .expect("Can't read from stdin !");
     msg.push_str(buff.trim());
+
+
+
     msg
 }

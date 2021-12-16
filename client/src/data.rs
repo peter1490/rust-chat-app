@@ -3,6 +3,8 @@ use base64;
 use serde::{Deserialize, Serialize};
 use serde_json::{self, Error as JsonError};
 use std::error::Error;
+use std::fs::File;
+use std::io::{Write, Read};
 
 #[derive(Serialize, Deserialize)]
 pub struct Message {
@@ -33,13 +35,24 @@ impl Message {
     }
 }
 
-fn new_messages_file(messages: Vec<Message>) -> serde_json::Result<()> {
-    let mut messages_serialized = String::new();
-    for i in messages {
-        let msg = i.to_string()?;
-        messages_serialized += &msg;
-    }
+fn convert_to_json(messages: Vec<Message>) -> Result<(), serde_json::Error> {
+    let json = serde_json::to_string(&messages)?;
+    let mut file = File::create("history.json").unwrap();
+    file.write_all(json.as_bytes()).expect("Cannot write in file");
     Ok(())
+}
+
+/*
+Prendre message -> ajouter au vecteur -> convertir ce vecteur en json -> print le vecteur pour l'utilisateur en question
+*/
+
+fn read_from_json(path: String) -> Result<Vec<Message>, std::io::Error>{
+    let mut file = File::open(path)?;
+    let mut json = String::new();
+    file.read_to_string(&mut json)?;
+
+    let messages: Vec<Message> = serde_json::from_str(&json)?;
+    Ok(messages)
 }
 
 #[derive(Serialize, Deserialize)]
