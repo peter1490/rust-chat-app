@@ -1,5 +1,3 @@
-use crate::data::{Message, convert_to_json, read_from_json};
-use std::fs::File;
 pub mod client;
 pub mod crypto;
 pub mod data;
@@ -8,7 +6,7 @@ use rsa::pkcs1::{ToRsaPrivateKey, ToRsaPublicKey};
 use std::fs::OpenOptions;
 use std::io::{Read, Write};
 fn main() {
-    println!("Choose a username: ");
+    
     let mut public_key = String::new();
     let mut private_key = String::new();
     match OpenOptions::new()
@@ -48,7 +46,7 @@ fn main() {
         }
     }
 
-    println!("uuid: ");
+    println!("Choose a username: ");
 
     let uuid = client::get_user_input();
 
